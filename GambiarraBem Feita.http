@@ -1,0 +1,6 @@
+@GambiarraBem_Feita_HostAddress = http://localhost:5243
+
+GET {{GambiarraBem_Feita_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

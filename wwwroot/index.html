@@ -1,0 +1,497 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Scraperzada feito na gambiarra da galera!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /*Header*/
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+            header h1 {
+                font-size: 3em;
+                margin-bottom: 10px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+
+            header p {
+                font-size: 1.2em;
+                opacity: 0.9;
+            }
+
+        /*Loading*/
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.5em;
+            padding: 50px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        /* Stats */
+        .stats {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeIn 1s ease;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+            .stat-item .number {
+                font-size: 2.5em;
+                font-weight: bold;
+                color: #667eea;
+            }
+
+            .stat-item .label {
+                color: #666;
+                margin-top: 5px;
+            }
+
+        /* Search */
+        .search-box {
+            margin-bottom: 30px;
+            animation: fadeIn 1.2s ease;
+        }
+
+            .search-box input {
+                width: 100%;
+                padding: 15px 20px;
+                font-size: 1.1em;
+                border: none;
+                border-radius: 50px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                outline: none;
+                transition: all 0.3s ease;
+            }
+
+                .search-box input:focus {
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                    transform: translateY(-2px);
+                }
+
+        /* News Grid */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            animation: fadeInUp 1s ease;
+        }
+
+        /* News Card */
+        .news-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: slideIn 0.5s ease;
+        }
+
+            .news-card:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            }
+
+            .news-card .card-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 20px;
+                color: white;
+                min-height: 120px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+
+                .news-card .card-header h3 {
+                    font-size: 1.2em;
+                    line-height: 1.4;
+                }
+
+            .news-card .card-body {
+                padding: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .news-card .card-link {
+                color: #667eea;
+                text-decoration: none;
+                font-weight: bold;
+                padding: 10px 20px;
+                border: 2px solid #667eea;
+                border-radius: 25px;
+                transition: all 0.3s ease;
+                display: inline-block;
+            }
+
+                .news-card .card-link:hover {
+                    background: #667eea;
+                    color: white;
+                    transform: scale(1.05);
+                }
+
+            .news-card .card-number {
+                font-size: 2em;
+                font-weight: bold;
+                color: #ddd;
+            }
+
+        /* No Results */
+        .no-results {
+            text-align: center;
+            color: white;
+            font-size: 1.5em;
+            padding: 50px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        /* Error */
+        .error {
+            background: #ff4757;
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+            animation: shake 0.5s ease;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @keyframes rainbow {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 20px;
+            opacity: 0.8;
+        }
+
+            footer a {
+                color: white;
+                text-decoration: none;
+                font-weight: bold;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📰 Scraperzada dos Praimus</h1>
+            <p>Chupa Notícias UOL! Notícias em tempo real no scraperzada</p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Carregando notícias...</p>
+        </div>
+        
+        <div id="error" style="display: none;"></div>
+
+        <div id="stats" style="display: none;" class="stats">
+            <div class="stat-item">
+                <div class="number" id="totalNews">0</div>
+                <div class="label">Total de Notícias</div>
+            </div>
+            <div class="stat-item">
+                <div class="number" id="visibleNews">0</div>
+                <div class="label">Exibindo</div>
+            </div>
+        </div>
+
+        <div id="search-container" style="display: none;" class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar notícias....">
+        </div>
+
+        <div id="newsContainer" class="news-grid"></div>
+
+        <div id="noResults" style="display: none;" class="no-results">
+            😕 Nenhuma notícia encontrada
+        </div>
+        
+        <footer>
+            <p>Desenvolvido com 💜 pelo seu primão</p>
+            <p>Scraper API - 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Config da API
+        const API_URL = '/api/news';
+
+        let allNews = [];
+        let filteredNews = [];
+
+        // Carregando notícias ao iniciar
+        window.addEventListener('DOMContentLoaded', loadNews);
+
+        async function loadNews() {
+            try {
+                showLoading(true);
+
+                const response = await fetch(API_URL);
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.noticias) {
+                    allNews = data.noticias;
+                    filteredNews = [...allNews];
+                    displayNews(filteredNews);
+                    updateStats();
+                    showSearchBox();
+                } else {
+                    throw new Error('Formato de dados inválido');
+                }
+
+            } catch (error) {
+                showError(`Erro ao carregar notícias: ${error.message}`);
+                console.error('Erro:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayNews(news) {
+            const container = document.getElementById('newsContainer');
+            container.innerHTML = '';
+
+            if (news.length === 0) {
+                document.getElementById('noResults').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('noResults').style.display = 'none';
+
+            news.forEach((noticia, index) => {
+                const card = createNewsCard(noticia, index + 1);
+                container.appendChild(card);
+            });
+
+            updateVisibleCount(news.length);
+        }
+
+        function createNewsCard(noticia, number) {
+            const card = document.createElement('div');
+            card.className = 'news-card';
+            card.style.animationDelay = `${(number - 1) * 0.1}s`;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <h3>${escapeHtml(noticia.titulo)}</h3>
+                </div>
+                <div class="card-body">
+                    <span class="card-number">#${number}</span>
+                    <a href="${escapeHtml(noticia.link)}" target="_blank" class="card-link">
+                        Ler mais →
+                    </a>
+                </div>
+            `;
+
+            // Efeito de clique no card inteiro
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'A') {
+                    window.open(noticia.link, '_blank');
+                }
+            });
+
+            return card;
+        }
+
+        function updateStats() {
+            document.getElementById('totalNews').textContent = allNews.length;
+            document.getElementById('visibleNews').textContent = filteredNews.length;
+            document.getElementById('stats').style.display = 'flex';
+        }
+
+        function updateVisibleCount(count) {
+            document.getElementById('visibleNews').textContent = count;
+        }
+
+        function showSearchBox() {
+            document.getElementById('search-container').style.display = 'block';
+            setupSearch();
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+
+                if (searchTerm === '') {
+                    filteredNews = [...allNews];
+                } else {
+                    filteredNews = allNews.filter(noticia =>
+                        noticia.titulo.toLowerCase().includes(searchTerm) ||
+                        noticia.link.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                displayNews(filteredNews);
+            });
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.className = 'error';
+            errorDiv.textContent = `❌ ${message}`;
+            errorDiv.style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 🎮 Easter Egg: Código Konami Personalizado
+        let konamiCode = [];
+        const konamiSequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'l', 'v', 'k'];
+
+        document.addEventListener('keydown', (e) => {
+            console.log('Tecla pressionada:', e.key); // DEBUG: ver teclas no console
+            
+            konamiCode.push(e.key);
+            konamiCode = konamiCode.slice(-12); // Mantém apenas as últimas 12 teclas
+
+            console.log('Sequência atual:', konamiCode.join(',')); // DEBUG
+            console.log('Sequência esperada:', konamiSequence.join(',')); // DEBUG
+
+            if (konamiCode.join(',') === konamiSequence.join(',')) {
+                console.log('🎉 EASTER EGG ATIVADO!'); // DEBUG
+                document.body.style.animation = 'rainbow 2s linear infinite';
+                setTimeout(() => {
+                    alert('🎉 VOCÊ ACABOU DE DAR UMA TRAGADA NUM VAPEZINHO COM BVLK COISA LINDA! 🌈');
+                    document.body.style.animation = '';
+                }, 100);
+            }
+        });
+
+        // Log para confirmar que o script carregou
+        console.log('✅ Easter Egg carregado! Digite: ↑↑↓↓←→←→blvk');
+    </script>
+</body>
+</html>

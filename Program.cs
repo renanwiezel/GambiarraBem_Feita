@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Net;
+using HtmlAgilityPack;
+using System.Text.RegularExpressions;
 
 namespace GambiarraBem_Feita
 {
@@ -11,11 +13,30 @@ namespace GambiarraBem_Feita
 
             // Adiciona serviços
             builder.Services.AddSingleton<Request>();
+            builder.Services.AddSingleton<HtmlParser>();
+            
+            // 🆕 ADICIONA CORS para permitir requisições do navegador
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
 
             var app = builder.Build();
 
-            // Endpoint de health check (obrigatório para Render)
-            app.MapGet("/", () => Results.Ok(new
+            // 🆕 HABILITA CORS (DEVE VIR ANTES DE UseStaticFiles)
+            app.UseCors();
+
+            // 🆕 HABILITA ARQUIVOS ESTÁTICOS (HTML, CSS, JS)
+            app.UseDefaultFiles(); // Procura por index.html automaticamente
+            app.UseStaticFiles();  // Serve arquivos da pasta wwwroot
+
+            // API Endpoint - health check
+            app.MapGet("/api", () => Results.Ok(new
             {
                 status = "ok",
                 message = "Scraper API está funcionando!",
@@ -23,7 +44,7 @@ namespace GambiarraBem_Feita
             }));
 
             // Endpoint para fazer scraping
-            app.MapGet("/scrape", async (string url, Request request) =>
+            app.MapGet("/api/scrape", async (string url, Request request) =>
             {
                 if (string.IsNullOrWhiteSpace(url))
                 {
@@ -56,8 +77,39 @@ namespace GambiarraBem_Feita
                 }
             });
 
+            // 🆕 Endpoint para PARSEAR NOTÍCIAS (URL FIXA)
+            app.MapGet("/api/news", async (Request request, HtmlParser parser) =>
+            {
+                string url = "https://www.rcfinancasmobile.com/teste/index.php";
+
+                try
+                {
+                    Console.WriteLine($"📰 Extraindo notícias de: {url}");
+                    string html = await request.GetHtmlAsync(url);
+                    var noticias = parser.ExtractNews(html, url);
+
+                    return Results.Ok(new
+                    {
+                        success = true,
+                        url,
+                        totalNoticias = noticias.Count,
+                        noticias
+                    });
+                }
+                catch (HttpRequestException ex)
+                {
+                    Console.WriteLine($"❌ Erro HTTP: {ex.Message}");
+                    return Results.Problem(detail: ex.Message, statusCode: 500);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Erro: {ex.Message}");
+                    return Results.Problem(detail: ex.Message, statusCode: 500);
+                }
+            });
+
             // Endpoint de teste com URL pré-definida
-            app.MapGet("/test", async (Request request) =>
+            app.MapGet("/api/test", async (Request request) =>
             {
                 string url = "https://www.rcfinancasmobile.com/teste/index.php";
                 try
@@ -129,5 +181,95 @@ namespace GambiarraBem_Feita
 
             return await resp.Content.ReadAsStringAsync();
         }
+    }
+
+    public class HtmlParser
+    {
+        public List<Noticia> ExtractNews(string html, string baseUrl)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            var noticias = new List<Noticia>();
+
+            // Seleciona os links <a> dentro de divs com classe "thumbnails-item"
+            var newsNodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'thumbnails-item')]//a[@href]");
+
+            if (newsNodes == null || newsNodes.Count == 0)
+            {
+                Console.WriteLine("⚠️ Nenhuma notícia encontrada com o padrão especificado!");
+                return noticias;
+            }
+
+            Console.WriteLine($"✅ Encontradas {newsNodes.Count} notícias.");
+
+            foreach (var linkNode in newsNodes)
+            {
+                try
+                {
+                    // Extrai o link do próprio nó <a>
+                    var link = linkNode.GetAttributeValue("href", string.Empty);
+
+                    // Converte URL relativa em absoluta
+                    if (!string.IsNullOrWhiteSpace(link))
+                    {
+                        link = MakeAbsoluteUrl(baseUrl, link);
+                    }
+
+                    // Extrai o título (h3.thumb-title dentro do link)
+                    var titleNode = linkNode.SelectSingleNode(".//h3[contains(@class, 'thumb-title')]");
+                    var titulo = titleNode != null ? CleanText(titleNode.InnerText) : string.Empty;
+
+                    // Só adiciona se tiver pelo menos o título
+                    if (!string.IsNullOrWhiteSpace(titulo))
+                    {
+                        noticias.Add(new Noticia
+                        {
+                            Titulo = titulo,
+                            Link = link
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Erro ao processar item: {ex.Message}");
+                    // Continua processando os outros itens
+                }
+            }
+
+            return noticias;
+        }
+
+        // Métodos auxiliares privados
+
+        private string CleanText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return string.Empty;
+
+            // Remove espaços extras, tabs e quebras de linha
+            text = Regex.Replace(text, @"\s+", " ");
+            return text.Trim();
+        }
+
+        private string MakeAbsoluteUrl(string baseUrl, string relativeUrl)
+        {
+            if (string.IsNullOrWhiteSpace(relativeUrl))
+                return string.Empty;
+
+            if (Uri.IsWellFormedUriString(relativeUrl, UriKind.Absolute))
+                return relativeUrl;
+
+            if (Uri.TryCreate(new Uri(baseUrl), relativeUrl, out var absoluteUri))
+                return absoluteUri.ToString();
+
+            return relativeUrl;
+        }
+    }
+
+    public class Noticia
+    {
+        public string Titulo { get; set; } = string.Empty;
+        public string Link { get; set; } = string.Empty;
     }
 }

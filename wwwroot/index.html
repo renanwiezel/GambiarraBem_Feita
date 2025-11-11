@@ -662,7 +662,7 @@
             }
         }
 
-        async function showNewsTextInModal(text, chunkDelay = 45) {
+        async function showNewsTextInModal(text, chunkDelay = 15) {
             const modalText = document.getElementById('modalText');
             modalText.innerHTML = '';
             if (!text) text = 'Texto da notícia não encontrado.';
@@ -701,14 +701,14 @@
                     requestAnimationFrame(() => { span.style.opacity = '1'; });
 
                     let extraDelay = 0;
-                    if (/[.!?]$/.test(chunk.trim())) extraDelay = 300;
-                    else if (/[,;:]$/.test(chunk.trim())) extraDelay = 150;
+                    if (/[.!?]$/.test(chunk.trim())) extraDelay = 200;
+                    else if (/[,;:]$/.test(chunk.trim())) extraDelay = 80;
 
                     await new Promise(r => setTimeout(r, chunkDelay + extraDelay));
                     const modalBody = document.querySelector('#newsModal .modal-body');
                     if (modalBody) modalBody.scrollTop = modalBody.scrollHeight;
                 }
-                await new Promise(r => setTimeout(r, 220));
+                await new Promise(r => setTimeout(r, 100));
             }
         }
 

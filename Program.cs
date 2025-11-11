@@ -120,19 +120,13 @@ namespace GambiarraBem_Feita
 
                 try
                 {
-                    // 🔥 URL do seu proxy PHP (hospedado externamente)
-                    var proxyBaseUrl = Environment.GetEnvironmentVariable("PROXY_PHP_URL")
-                        ?? "http://localhost:8000/proxy.php"; // local para testes
+                    // 🔥 USA ScraperAPI (substitui proxy PHP)
+                    string html = await request.GetHtmlViaScraperAPI(url);
 
-                    // 🆕 Usa o proxy PHP em vez de GetHtmlAsync direto
-                    string html = await request.GetHtmlViaProxyAsync(url, proxyBaseUrl);
-
-                    Console.WriteLine($"✅ HTML recebido via proxy: {html.Length} chars");
+                    Console.WriteLine($"✅ HTML recebido via ScraperAPI: {html.Length} chars");
 
                     var doc = new HtmlDocument();
                     doc.LoadHtml(html);
-
-                    // ... (todo o resto do código de parse permanece IGUAL) ...
 
                     // Título (h1 ou meta og:title)
                     string title = string.Empty;
@@ -305,63 +299,38 @@ namespace GambiarraBem_Feita
             return client;
         }
 
-        public async Task<string> GetHtmlViaProxyAsync(string url, string proxyBaseUrl)
+        public async Task<string> GetHtmlViaScraperAPI(string url)
         {
-            using var cliente = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
+            var apiKey = Environment.GetEnvironmentVariable("SCRAPER_API_KEY")
+                ?? throw new Exception("SCRAPER_API_KEY não configurada no Render");
 
-            var proxyUrl = $"{proxyBaseUrl}?url={Uri.EscapeDataString(url)}";
-            Console.WriteLine($"🔄 Usando proxy: {proxyUrl}");
+            var scraperUrl = $"http://api.scraperapi.com?api_key={apiKey}&url={Uri.EscapeDataString(url)}";
+
+            Console.WriteLine($"🔄 Usando ScraperAPI para: {url}");
+
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
 
             try
             {
-                var response = await cliente.GetStringAsync(proxyUrl);
-
-                // 🆕 Log da resposta bruta (primeiros 500 chars para debug)
-                var preview = response.Length > 500 ? response.Substring(0, 500) : response;
-                Console.WriteLine($"📥 Resposta do proxy (preview): {preview}");
-
-                // 🆕 Verifica se a resposta é JSON válido
-                if (response.TrimStart().StartsWith("<"))
-                {
-                    Console.WriteLine($"❌ ERRO: Proxy retornou HTML em vez de JSON!");
-                    Console.WriteLine($"📄 Resposta completa (primeiros 1000 chars): {response.Substring(0, Math.Min(1000, response.Length))}");
-                    throw new HttpRequestException($"Proxy retornou HTML em vez de JSON. O InfinityFree pode estar bloqueando requisições do Render.");
-                }
-
-                var data = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(response);
-
-                if (!data.GetProperty("success").GetBoolean())
-                {
-                    var error = data.TryGetProperty("error", out var err) ? err.GetString() : "Erro desconhecido";
-                    var httpCode = data.TryGetProperty("httpCode", out var code) ? code.GetInt32() : 500;
-                    throw new HttpRequestException($"Proxy retornou erro (HTTP {httpCode}): {error}");
-                }
-
-                var html = data.GetProperty("html").GetString() ?? string.Empty;
-                Console.WriteLine($"✅ HTML recebido via proxy: {html.Length} chars");
+                var html = await client.GetStringAsync(scraperUrl);
+                Console.WriteLine($"✅ HTML recebido via ScraperAPI: {html.Length} chars");
                 return html;
-            }
-            catch (JsonException ex)
-            {
-                Console.WriteLine($"❌ Erro ao parsear JSON: {ex.Message}");
-                throw new HttpRequestException($"Proxy não retornou JSON válido: {ex.Message}");
-            }
-            catch (TaskCanceledException)
-            {
-                Console.WriteLine($"⏱️ Timeout ao acessar proxy (45s)");
-                throw new HttpRequestException("Timeout ao acessar o proxy PHP");
             }
             catch (HttpRequestException ex)
             {
-                Console.WriteLine($"❌ Erro HTTP ao acessar proxy: {ex.Message}");
-                throw;
+                Console.WriteLine($"❌ Erro HTTP no ScraperAPI: {ex.Message}");
+                throw new HttpRequestException($"ScraperAPI falhou: {ex.Message}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Erro inesperado: {ex.Message}");
-                throw new HttpRequestException($"Erro ao acessar proxy: {ex.Message}");
+                throw;
             }
         }
+
+        // ...existing code...
+
+
         public async Task<string> GetHtmlAsync(string url)
         {
             using var client = CreateClient();

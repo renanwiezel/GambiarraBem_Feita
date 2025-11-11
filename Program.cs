@@ -309,22 +309,58 @@ namespace GambiarraBem_Feita
         {
             using var cliente = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
 
-            // Monta a URL do proxy
             var proxyUrl = $"{proxyBaseUrl}?url={Uri.EscapeDataString(url)}";
-            Console.WriteLine($"Usando proxy: {proxyUrl}");
+            Console.WriteLine($"🔄 Usando proxy: {proxyUrl}");
 
-            var response = await cliente.GetStringAsync(proxyUrl);
-
-            //Parse do JSON retornado pelo PHP
-            var data = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(response);
-
-            if (!data.GetProperty("success").GetBoolean())
+            try
             {
-                var error = data.GetProperty("error").GetString();
-                throw new HttpRequestException($"Erro ao acessar via proxy: {error}");
-            }
+                var response = await cliente.GetStringAsync(proxyUrl);
 
-            return data.GetProperty("html").GetString() ?? string.Empty;
+                // 🆕 Log da resposta bruta (primeiros 500 chars para debug)
+                var preview = response.Length > 500 ? response.Substring(0, 500) : response;
+                Console.WriteLine($"📥 Resposta do proxy (preview): {preview}");
+
+                // 🆕 Verifica se a resposta é JSON válido
+                if (response.TrimStart().StartsWith("<"))
+                {
+                    Console.WriteLine($"❌ ERRO: Proxy retornou HTML em vez de JSON!");
+                    Console.WriteLine($"📄 Resposta completa (primeiros 1000 chars): {response.Substring(0, Math.Min(1000, response.Length))}");
+                    throw new HttpRequestException($"Proxy retornou HTML em vez de JSON. O InfinityFree pode estar bloqueando requisições do Render.");
+                }
+
+                var data = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(response);
+
+                if (!data.GetProperty("success").GetBoolean())
+                {
+                    var error = data.TryGetProperty("error", out var err) ? err.GetString() : "Erro desconhecido";
+                    var httpCode = data.TryGetProperty("httpCode", out var code) ? code.GetInt32() : 500;
+                    throw new HttpRequestException($"Proxy retornou erro (HTTP {httpCode}): {error}");
+                }
+
+                var html = data.GetProperty("html").GetString() ?? string.Empty;
+                Console.WriteLine($"✅ HTML recebido via proxy: {html.Length} chars");
+                return html;
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"❌ Erro ao parsear JSON: {ex.Message}");
+                throw new HttpRequestException($"Proxy não retornou JSON válido: {ex.Message}");
+            }
+            catch (TaskCanceledException)
+            {
+                Console.WriteLine($"⏱️ Timeout ao acessar proxy (45s)");
+                throw new HttpRequestException("Timeout ao acessar o proxy PHP");
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"❌ Erro HTTP ao acessar proxy: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Erro inesperado: {ex.Message}");
+                throw new HttpRequestException($"Erro ao acessar proxy: {ex.Message}");
+            }
         }
         public async Task<string> GetHtmlAsync(string url)
         {

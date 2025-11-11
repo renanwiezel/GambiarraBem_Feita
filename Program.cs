@@ -2,6 +2,8 @@
 using System.Net;
 using HtmlAgilityPack;
 using System.Text.RegularExpressions;
+using System.Linq.Expressions;
+using System.Text.Json;
 
 namespace GambiarraBem_Feita
 {
@@ -14,7 +16,7 @@ namespace GambiarraBem_Feita
             // Adiciona serviços
             builder.Services.AddSingleton<Request>();
             builder.Services.AddSingleton<HtmlParser>();
-            
+
             // 🆕 ADICIONA CORS para permitir requisições do navegador
             builder.Services.AddCors(options =>
             {
@@ -108,6 +110,145 @@ namespace GambiarraBem_Feita
                 }
             });
 
+            // Endpoint para extrair conteúdo da notícia
+            app.MapGet("/api/news-content", async (string url, Request request) =>
+            {
+                Console.WriteLine($"📄 Extraindo conteúdo da notícia: {url}");
+
+                if (string.IsNullOrWhiteSpace(url))
+                    return Results.BadRequest(new { error = "URL é obrigatória. Use ?url=https://exemplo.com/noticia" });
+
+                try
+                {
+                    // 🔥 URL do seu proxy PHP (hospedado externamente)
+                    var proxyBaseUrl = Environment.GetEnvironmentVariable("PROXY_PHP_URL")
+                        ?? "http://localhost:8000/proxy.php"; // local para testes
+
+                    // 🆕 Usa o proxy PHP em vez de GetHtmlAsync direto
+                    string html = await request.GetHtmlViaProxyAsync(url, proxyBaseUrl);
+
+                    Console.WriteLine($"✅ HTML recebido via proxy: {html.Length} chars");
+
+                    var doc = new HtmlDocument();
+                    doc.LoadHtml(html);
+
+                    // ... (todo o resto do código de parse permanece IGUAL) ...
+
+                    // Título (h1 ou meta og:title)
+                    string title = string.Empty;
+                    var h1 = doc.DocumentNode.SelectSingleNode("//h1");
+                    if (h1 != null)
+                        title = h1.InnerText.Trim();
+                    else
+                    {
+                        var metaTitle = doc.DocumentNode.SelectSingleNode("//meta[@property='og:title' or @name='title']");
+                        if (metaTitle != null)
+                            title = metaTitle.GetAttributeValue("content", "").Trim();
+                    }
+
+                    // 1) Bullets / topicText (ex.: UOL)
+                    var parts = new List<string>();
+                    var bulletParagraphs = doc.DocumentNode.SelectNodes("//p[contains(@class,'bullet')]");
+                    if (bulletParagraphs != null)
+                    {
+                        foreach (var p in bulletParagraphs)
+                        {
+                            var span = p.SelectSingleNode(".//span[contains(@class,'topicText')]");
+                            if (span != null)
+                                parts.Add(span.InnerText.Trim());
+                            else
+                            {
+                                var txt = p.InnerText.Trim();
+                                if (!string.IsNullOrWhiteSpace(txt))
+                                    parts.Add(txt);
+                            }
+                        }
+                    }
+
+                    // 2) Corpo principal: tenta vários padrões comuns
+                    if (parts.Count == 0)
+                    {
+                        var bodyNode = doc.DocumentNode.SelectSingleNode(
+                            "//div[contains(@class,'c-news__body')] | //div[contains(@class,'content')] | //div[contains(@class,'article-content')] | //article | //main"
+                        );
+
+                        if (bodyNode != null)
+                        {
+                            var paragraphs = bodyNode.SelectNodes(".//p");
+                            if (paragraphs != null)
+                            {
+                                foreach (var p in paragraphs)
+                                {
+                                    var txt = p.InnerText.Trim();
+                                    if (!string.IsNullOrWhiteSpace(txt))
+                                        parts.Add(txt);
+                                }
+                            }
+                        }
+                    }
+
+                    // 3) fallback: spans com topicText em qualquer lugar
+                    if (parts.Count == 0)
+                    {
+                        var topicSpans = doc.DocumentNode.SelectNodes("//span[contains(@class,'topicText')] | //p[contains(@class,'topicText')]");
+                        if (topicSpans != null)
+                        {
+                            foreach (var s in topicSpans)
+                            {
+                                var txt = s.InnerText.Trim();
+                                if (!string.IsNullOrWhiteSpace(txt))
+                                    parts.Add(txt);
+                            }
+                        }
+                    }
+
+                    // 4) último recurso: meta description
+                    if (parts.Count == 0)
+                    {
+                        var metaDesc = doc.DocumentNode.SelectSingleNode("//meta[@name='description' or @property='og:description']");
+                        if (metaDesc != null)
+                        {
+                            var content = metaDesc.GetAttributeValue("content", "").Trim();
+                            if (!string.IsNullOrWhiteSpace(content))
+                                parts.Add(content);
+                        }
+                    }
+
+                    // Normaliza e remove duplicatas simples
+                    var cleaned = new List<string>();
+                    foreach (var p in parts)
+                    {
+                        var t = System.Text.RegularExpressions.Regex.Replace(p, @"\s+", " ").Trim();
+                        if (!cleaned.Contains(t))
+                            cleaned.Add(t);
+                    }
+
+                    var bodyText = cleaned.Count > 0 ? string.Join("\n\n", cleaned) : string.Empty;
+
+                    var mainText = string.Empty;
+                    if (!string.IsNullOrWhiteSpace(bodyText))
+                        mainText = (string.IsNullOrWhiteSpace(title) ? "" : title + "\n\n") + bodyText;
+                    else if (!string.IsNullOrWhiteSpace(title))
+                        mainText = title;
+                    else
+                        mainText = "Texto principal não encontrado";
+
+                    Console.WriteLine($"✅ Texto extraído (len={mainText.Length})");
+
+                    return Results.Ok(new
+                    {
+                        success = true,
+                        url,
+                        mainText
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Erro ao extrair notícia: {ex.Message}");
+                    return Results.Problem(detail: ex.Message, statusCode: 500);
+                }
+            });
+
             // Endpoint de teste com URL pré-definida
             app.MapGet("/api/test", async (Request request) =>
             {
@@ -164,6 +305,27 @@ namespace GambiarraBem_Feita
             return client;
         }
 
+        public async Task<string> GetHtmlViaProxyAsync(string url, string proxyBaseUrl)
+        {
+            using var cliente = new HttpClient { Timeout = TimeSpan.FromSeconds(45) };
+
+            // Monta a URL do proxy
+            var proxyUrl = $"{proxyBaseUrl}?url={Uri.EscapeDataString(url)}";
+            Console.WriteLine($"Usando proxy: {proxyUrl}");
+
+            var response = await cliente.GetStringAsync(proxyUrl);
+
+            //Parse do JSON retornado pelo PHP
+            var data = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(response);
+
+            if (!data.GetProperty("success").GetBoolean())
+            {
+                var error = data.GetProperty("error").GetString();
+                throw new HttpRequestException($"Erro ao acessar via proxy: {error}");
+            }
+
+            return data.GetProperty("html").GetString() ?? string.Empty;
+        }
         public async Task<string> GetHtmlAsync(string url)
         {
             using var client = CreateClient();
@@ -215,6 +377,22 @@ namespace GambiarraBem_Feita
                     {
                         link = MakeAbsoluteUrl(baseUrl, link);
                     }
+                    // Busca a imagem dentro do linkNode
+                    var imgNode = linkNode.SelectSingleNode(".//img");
+                    var imagem = string.Empty;
+                    if (imgNode != null)
+                    {
+                        // Priorize data-src
+                        imagem = imgNode.GetAttributeValue("data-src", string.Empty);
+                        if (string.IsNullOrWhiteSpace(imagem))
+                        {
+                            imagem = imgNode.GetAttributeValue("src", string.Empty);
+                        }
+                        if (!string.IsNullOrWhiteSpace(imagem))
+                        {
+                            imagem = MakeAbsoluteUrl(baseUrl, imagem);
+                        }
+                    }
 
                     // Extrai o título (h3.thumb-title dentro do link)
                     var titleNode = linkNode.SelectSingleNode(".//h3[contains(@class, 'thumb-title')]");
@@ -226,7 +404,8 @@ namespace GambiarraBem_Feita
                         noticias.Add(new Noticia
                         {
                             Titulo = titulo,
-                            Link = link
+                            Link = link,
+                            imagem = imagem // Adiciona imagem
                         });
                     }
                 }
@@ -271,5 +450,6 @@ namespace GambiarraBem_Feita
     {
         public string Titulo { get; set; } = string.Empty;
         public string Link { get; set; } = string.Empty;
+        public string imagem { get; set; } = string.Empty;
     }
 }

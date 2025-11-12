@@ -252,15 +252,43 @@
         .modal-header {
             position: relative;
             width: 100%;
+            min-height: 280px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .modal-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-size: cover;
+            background-position: center top;
+            /* 🔥 mudou de "center" para "center top" */
+            background-repeat: no-repeat;
+            filter: blur(8px) brightness(0.7);
+            transform: scale(1.1);
+            z-index: 0;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 70%, transparent 100%);
+            pointer-events: none;
+            z-index: 1;
         }
 
         .modal-header img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            display: block;
+            display: none !important;
         }
 
         .modal-header::after {
@@ -275,17 +303,15 @@
         }
 
         .modal-header h2 {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            position: relative;
             margin: 0;
-            padding: 20px 25px;
-            font-size: 1.5rem;
+            padding: 25px 30px;
+            font-size: 1.6rem;
             line-height: 1.3;
             color: white;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-            z-index: 1;
+            text-shadow: 0 3px 12px rgba(0, 0, 0, 0.8);
+            z-index: 2;
+            font-weight: 600;
         }
 
         /* Body: area rolável. min-height:0 is critical inside flex containers */
@@ -704,18 +730,38 @@
         async function showModal(noticia) {
             typingAbort = false;
 
-            // fill header
+            // Título
             document.getElementById('modalTitle').textContent = noticia.titulo || '';
-            const img = document.getElementById('modalImg');
 
-            // 🆕 Se não tem imagem, esconde no modal
+            const modalHeader = document.querySelector('.modal-header');
             const hasImage = noticia.imagem && noticia.imagem.trim() !== '';
+
+            // 🆕 SEMPRE remove o style anterior primeiro (limpa cache)
+            const oldStyle = document.getElementById('modal-bg-style');
+            if (oldStyle) oldStyle.remove();
+
             if (hasImage) {
-                img.src = noticia.imagem;
-                img.alt = noticia.titulo || 'Imagem da notícia';
-                img.style.display = 'block';
+                // Cria novo style com background (prioriza topo)
+                const style = document.createElement('style');
+                style.id = 'modal-bg-style';
+                style.textContent = `
+            .modal-header::before {
+                background-image: url(${noticia.imagem});
+                background-position: center top !important;
+            }
+        `;
+                document.head.appendChild(style);
             } else {
-                img.style.display = 'none';
+                // SEM imagem: força ::before a não ter background
+                const style = document.createElement('style');
+                style.id = 'modal-bg-style';
+                style.textContent = `
+            .modal-header::before {
+                background-image: none !important;
+                display: none;
+            }
+        `;
+                document.head.appendChild(style);
             }
 
             // reset text & chat

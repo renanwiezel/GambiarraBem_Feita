@@ -236,55 +236,76 @@
         /* Modal content (single authoritative definition) */
         .modal-content {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 20px;
             text-align: left;
             position: relative;
-            width: min(1100px, 98%);
-            max-width: 1100px;
-            max-height: calc(100vh - 80px);
-            /* garante que não ultrapasse a viewport */
+            width: min(900px, 95%);
+            max-width: 900px;
+            max-height: calc(100vh - 60px);
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
         /* Header (title + image) */
         .modal-header {
-            display: flex;
-            gap: 18px;
-            align-items: center;
+            position: relative;
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
         }
 
         .modal-header img {
-            width: 140px;
-            height: 140px;
+            width: 100%;
+            height: 250px;
             object-fit: cover;
-            border-radius: 12px;
-            flex: 0 0 140px;
+            display: block;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            pointer-events: none;
         }
 
         .modal-header h2 {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
             margin: 0;
-            font-size: 1.25rem;
-            line-height: 1.2;
-            color: #222;
+            padding: 20px 25px;
+            font-size: 1.5rem;
+            line-height: 1.3;
+            color: white;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            z-index: 1;
         }
 
         /* Body: area rolável. min-height:0 is critical inside flex containers */
         .modal-body {
             overflow-y: auto;
-            padding-right: 8px;
+            padding: 25px;
             flex: 1 1 auto;
             min-height: 0;
+            background: white;
         }
 
         #modalText {
-            font-size: 1rem;
+            font-size: 1.05rem;
+            line-height: 1.7;
             color: #333;
             white-space: pre-wrap;
+        }
+
+        #modalText p {
+            margin-bottom: 16px !important;
         }
 
         /* Chat footer (fixed inside modal, does not scroll with modal-body) */
@@ -292,31 +313,33 @@
             display: flex;
             flex-direction: column;
             flex: none;
-            border-top: 1px solid rgba(0, 0, 0, 0.06);
-            padding: 10px;
-            background: #fff;
-            gap: 8px;
+            border-top: 2px solid #f0f0f0;
+            padding: 15px 25px;
+            background: #fafafa;
+            gap: 10px;
         }
 
         .chat-messages {
-            max-height: 160px;
+            max-height: 180px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            padding: 6px;
+            gap: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 12px;
         }
 
         .chat-msg {
-            max-width: 86%;
-            padding: 8px 12px;
-            border-radius: 12px;
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 16px;
             font-size: 0.95rem;
-            line-height: 1.3;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            line-height: 1.4;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             opacity: 0;
-            transform: translateY(6px);
-            transition: opacity .18s ease, transform .18s ease;
+            transform: translateY(8px);
+            transition: opacity .2s ease, transform .2s ease;
         }
 
         .chat-msg.show {
@@ -326,89 +349,123 @@
 
         .chat-msg.user {
             align-self: flex-end;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
+            border-bottom-right-radius: 4px;
         }
 
         .chat-msg.assistant {
             align-self: flex-start;
-            background: #f3f4f6;
-            color: #111;
+            background: white;
+            border: 1px solid #e0e0e0;
+            color: #222;
+            border-bottom-left-radius: 4px;
         }
 
         .chat-input-row {
             display: flex;
-            gap: 8px;
-            align-items: center;
+            gap: 10px;
+            align-items: flex-end;
         }
 
         .chat-input {
             flex: 1 1 auto;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
             resize: vertical;
             font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color .2s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+            outline: none;
         }
 
         .chat-send {
-            padding: 10px 14px;
-            border-radius: 10px;
-            background: #667eea;
+            padding: 12px 24px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
             cursor: pointer;
+            font-weight: 600;
+            transition: transform .2s, box-shadow .2s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .chat-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
         }
 
         .chat-send:active {
-            transform: translateY(1px);
+            transform: translateY(0);
         }
 
         /* Close button */
         .close {
             position: absolute;
-            top: 10px;
-            right: 14px;
-            font-size: 1.8em;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            font-size: 1.5em;
             cursor: pointer;
-            z-index: 3;
-            background: transparent;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
             border: none;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, transform .2s;
+            backdrop-filter: blur(4px);
+        }
+
+        .close:hover {
+            background: rgba(0, 0, 0, 0.08);
+            transform: rotate(90deg);
         }
 
         /* Small screens: override only necessary props */
         @media (max-width: 700px) {
-            header h1 {
-                font-size: 2em;
-            }
-
-            .news-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats {
-                flex-direction: column;
-                gap: 15px;
-            }
-
             .modal-content {
-                padding: 14px;
-                max-height: calc(100vh - 40px);
-            }
-
-            .modal-header {
-                flex-direction: column;
-                align-items: flex-start;
+                width: 98%;
+                max-height: calc(100vh - 20px);
+                border-radius: 15px;
             }
 
             .modal-header img {
-                width: 100%;
-                height: auto;
-                flex: none;
+                height: 180px;
+            }
+
+            .modal-header h2 {
+                font-size: 1.2rem;
+                padding: 15px 20px;
+            }
+
+            .modal-body {
+                padding: 20px;
+            }
+
+            #modalText {
+                font-size: 1rem;
+            }
+
+            .chat-container {
+                padding: 12px 20px;
             }
 
             .chat-messages {
-                max-height: 120px;
+                max-height: 140px;
+            }
+
+            .chat-msg {
+                max-width: 85%;
             }
         }
 
@@ -619,27 +676,47 @@
             const card = document.createElement('div');
             card.className = 'news-card';
             card.style.animationDelay = `${(number - 1) * 0.06}s`;
+
+            const hasImage = noticia.imagem && noticia.imagem.trim() !== '';
+            const imageHtml = hasImage
+                ? `<img src="${noticia.imagem}" 
+               alt="Imagem" 
+               onerror="this.outerHTML='<div style=\\'width:140px;height:140px;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);flex-shrink:0;\\'><span style=\\'font-size:3.5em;\\'>📰</span></div>';" 
+               style="width:140px;height:140px;object-fit:cover;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);flex-shrink:0;" />`
+                : `<div style="width:140px;height:140px;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);flex-shrink:0;">
+             <span style="font-size:6em;">📰</span>
+           </div>`;
+
             card.innerHTML = `
-                <div class="card-header" style="display:flex;align-items:center;gap:15px;">
-                    <img src="${noticia.imagem || ''}" alt="Imagem" style="width:100px;height:100px;object-fit:cover;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);" />
-                    <h3 style="margin:0;">${escapeHtml(noticia.titulo || '')}</h3>
-                </div>
-                <div class="card-body">
-                    <span class="card-number">#${number}</span>
-                    <a href="#" class="card-link" data-index="${number - 1}">Ler mais →</a>
-                </div>
-            `;
+        <div class="card-header" style="display:flex;align-items:center;gap:15px;min-height:160px;">
+            ${imageHtml}
+            <h3 style="margin:0;flex:1;">${escapeHtml(noticia.titulo || '')}</h3>
+        </div>
+        <div class="card-body">
+            <span class="card-number">#${number}</span>
+            <a href="#" class="card-link" data-index="${number - 1}">Ler mais →</a>
+        </div>
+    `;
             card.querySelector('.card-link').addEventListener('click', (e) => { e.preventDefault(); showModal(noticia); });
             return card;
         }
 
         async function showModal(noticia) {
             typingAbort = false;
+
             // fill header
             document.getElementById('modalTitle').textContent = noticia.titulo || '';
             const img = document.getElementById('modalImg');
-            img.src = noticia.imagem || '';
-            img.alt = noticia.titulo || 'Imagem da notícia';
+
+            // 🆕 Se não tem imagem, esconde no modal
+            const hasImage = noticia.imagem && noticia.imagem.trim() !== '';
+            if (hasImage) {
+                img.src = noticia.imagem;
+                img.alt = noticia.titulo || 'Imagem da notícia';
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
 
             // reset text & chat
             const modalText = document.getElementById('modalText');
@@ -662,7 +739,7 @@
             }
         }
 
-        async function showNewsTextInModal(text, chunkDelay = 25) {
+        async function showNewsTextInModal(text, chunkDelay = 20) {
             const modalText = document.getElementById('modalText');
             modalText.innerHTML = '';
             if (!text) text = 'Texto da notícia não encontrado.';
@@ -673,11 +750,11 @@
             for (let pIndex = 0; pIndex < paragraphs.length; pIndex++) {
                 if (typingAbort) return;
                 const paragraph = paragraphs[pIndex].trim();
-                if (!paragraph) { await new Promise(r => setTimeout(r, 200)); continue; }
+                if (!paragraph) { await new Promise(r => setTimeout(r, 100)); continue; }
 
                 const pEl = document.createElement('p');
                 pEl.style.marginBottom = '14px';
-                modalText.appendChild(pEl); // must append before filling
+                modalText.appendChild(pEl);
 
                 const tokens = paragraph.match(/\w+|\s+|[^\s\w]+/g) || [];
                 const chunks = [];
@@ -708,7 +785,7 @@
                     const modalBody = document.querySelector('#newsModal .modal-body');
                     if (modalBody) modalBody.scrollTop = modalBody.scrollHeight;
                 }
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise(r => setTimeout(r, 120));
             }
         }
 
